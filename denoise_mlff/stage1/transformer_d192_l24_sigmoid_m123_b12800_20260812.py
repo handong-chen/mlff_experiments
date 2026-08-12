@@ -1,10 +1,11 @@
-"""Stage-1 deep, narrow WGT with sigmoid gates and a fixed p=6 C2 envelope.
+"""Stage-1 dense Transformer with independent sigmoid gates and cell multiplicity.
 
-Relative to the d384/L12 AttnRes sibling, this model halves the embedding
-width and doubles the depth. Three heads retain the 64-channel head dimension.
-The fixed envelope uses rc=5 A and independently gates each learned sigmoid
-score. Each source atom's message is divided by its sum of envelope weights,
-forming a smooth local atom mean without softmax competition between scores.
+The architecture matches the d192/L24 Full-AttnRes control except that every
+pair is gated independently and the message is averaged over valid atoms,
+instead of using a score-normalized softmax. This makes atom states intensive
+without coupling one edge's gate to the scores of any other edges.
+Each logical batch samples total supercell multiplicity M with probabilities
+P(M=1,2,3)=(0.7, 0.2, 0.1) before atom-budget packing.
 """
 
 from __future__ import annotations
@@ -23,13 +24,9 @@ MIN_ENERGY_SPLIT_SCHEME = (
     "min_energy_frame_rms_q90_uniform_train98_val1_test1_seed0"
 )
 TRAJECTORY_ID_TRANSFORM = "drop_last_dash_component"
-TARGET_TRAIN_BATCH_ATOMS = 32_000
-MAX_ATOMS = 100
-REFERENCE_GPU_MEMORY_GIB = 8.0
-REFERENCE_MICROBATCH_ATOMS = 1_700
-MICROBATCH_ATOM_GRANULARITY = 100
-REFERENCE_MICROBATCH_EDGES = 44_000
-MICROBATCH_EDGE_GRANULARITY = 1_000
+TARGET_TRAIN_BATCH_ATOMS = 12_800
+FULL_TIER_MICROBATCH_ATOMS = 7_200
+FULL_TIER_MICROBATCH_PAIR_SLOTS = 750_000
 
 
 def _short_code_version(version: str) -> str:
@@ -61,46 +58,20 @@ class ConfigProvider:
     def __call__(self, *args, **kwargs):
         del args, kwargs
         fit_config_name = Path(__file__).stem
-        batch_plan = resolve_elastic_batch(
-            target_train_batch_atoms=TARGET_TRAIN_BATCH_ATOMS,
-            full_budget_memory_gib=80,
-        )
-        # Sparse WGT memory scales with retained periodic edges rather than the
-        # dense padded-pair proxy. Bound both exact retained edges and atoms,
-        # while keeping one logical batch and optimizer computation fixed.
-        scaled_microbatch_atoms = min(
-            TARGET_TRAIN_BATCH_ATOMS,
-            max(
-                MAX_ATOMS,
-                int(
-                    REFERENCE_MICROBATCH_ATOMS
-                    * batch_plan.gpu_memory_gib
-                    / REFERENCE_GPU_MEMORY_GIB
-                    / MICROBATCH_ATOM_GRANULARITY
-                )
-                * MICROBATCH_ATOM_GRANULARITY,
-            ),
-        )
-        scaled_microbatch_edges = max(
-            MICROBATCH_EDGE_GRANULARITY,
-            int(
-                REFERENCE_MICROBATCH_EDGES
-                * batch_plan.gpu_memory_gib
-                / REFERENCE_GPU_MEMORY_GIB
-                / MICROBATCH_EDGE_GRANULARITY
-            )
-            * MICROBATCH_EDGE_GRANULARITY,
+        physical_batch_plan = resolve_elastic_batch(
+            target_train_batch_atoms=FULL_TIER_MICROBATCH_ATOMS,
+            full_budget_memory_gib=79.0,
+            # Under AMP, Full AttnRes retains growing history stacks at every
+            # sublayer. The deeper model therefore needs lower physical caps
+            # even though its width and parameter count are smaller.
+            full_budget_pair_slots=FULL_TIER_MICROBATCH_PAIR_SLOTS,
         )
         batch_plan = replace(
-            batch_plan,
-            max_train_microbatch_atoms=scaled_microbatch_atoms,
+            physical_batch_plan,
+            target_train_batch_atoms=TARGET_TRAIN_BATCH_ATOMS,
+            max_train_batch_atoms=TARGET_TRAIN_BATCH_ATOMS,
         )
         print_elastic_batch_plan(batch_plan)
-        print(
-            "[denoise-mlff][elastic-wgt] "
-            f"max_train_microbatch_edges={scaled_microbatch_edges}",
-            flush=True,
-        )
         code_version = _resolve_code_version_str()
         output_dir = os.path.join(
             MODEL_ROOT,
@@ -118,7 +89,7 @@ class ConfigProvider:
 
         return dict(
             model=dict(
-                name="remote_import.mlff.model.build_wgt_denoiser",
+                name="remote_import.mlff.model.build_sigmoid_transformer_denoiser",
                 params=dict(
                     config=dict(
                         n_elements=119,
@@ -126,14 +97,14 @@ class ConfigProvider:
                         n_heads=3,
                         n_layers=24,
                         n_rbf=32,
-                        rbf_cutoff=5.0,
-                        envelope_exponent=6,
+                        rbf_cutoff=10.0,
                         rpe_mode="film",
                         qk_norm=True,
-                        attn_weight_drop=0.0,
-                        attn_key_drop=0.0,
                         attn_res=True,
-                        architecture_version="wgt_windowed_graph_transformer_v5",
+                        pair_film_backend="triton",
+                        architecture_version=(
+                            "transformer_filmzero_rpe_sigmoid_mean_v5"
+                        ),
                         position_head_hidden=384,
                         position_head_n_layers=2,
                         position_head_init_output_std=1.0e-3,
@@ -156,7 +127,7 @@ class ConfigProvider:
                 name="remote_import.mlff.pipeline.build_optimizer",
                 params=dict(
                     name="torch.optim.AdamW",
-                    params=dict(lr=3.0e-4, weight_decay=0.01),
+                    params=dict(lr=1.0e-3, weight_decay=0.01),
                 ),
             ),
             lr_scheduler=dict(
@@ -164,8 +135,10 @@ class ConfigProvider:
                 params=dict(
                     name="exp_warmup",
                     params=dict(
-                        warmup_steps=1_000,
-                        decay_steps=20_000,
+                        # 12.8k atoms/step gives 3/4 as many steps per epoch
+                        # as the 9.6k sibling, preserving the epoch schedule.
+                        warmup_steps=3_750,
+                        decay_steps=75_000,
                         min_lr_ratio=0.01,
                     ),
                     interval="step",
@@ -204,17 +177,17 @@ class ConfigProvider:
                 train_split="train",
                 val_split="val",
                 batch_size=8,
-                max_atoms=MAX_ATOMS,
+                max_atoms=100,
                 max_train_batch_atoms=batch_plan.max_train_batch_atoms,
                 target_train_batch_atoms=batch_plan.target_train_batch_atoms,
                 max_train_microbatch_atoms=batch_plan.max_train_microbatch_atoms,
                 max_train_microbatch_pair_slots=(
                     batch_plan.max_train_microbatch_pair_slots
                 ),
-                max_train_microbatch_edges=scaled_microbatch_edges,
                 elastic_batch_memory_gib=batch_plan.gpu_memory_gib,
                 elastic_batch_tier=batch_plan.tier,
-                train_batch_bucket_size=None,
+                train_batch_bucket_size=1024,
+                train_supercell_multiplicity_probabilities=(0.7, 0.2, 0.1),
                 num_workers=4,
                 pin_memory=True,
                 drop_last_train=True,
@@ -230,7 +203,7 @@ class ConfigProvider:
                 random_rotation_train=True,
                 gates=dict(
                     max_rmse_over_corruption=1.0,
-                    min_effective_neighbor_frac=0.25,
+                    min_effective_neighbor_frac=0.0,
                     min_pred_correction_norm_mean=1.0e-5,
                     enforce=False,
                 ),
