@@ -29,6 +29,8 @@ FULL_TIER_MICROBATCH_ATOMS = 7_200
 FULL_TIER_MICROBATCH_PAIR_SLOTS = 750_000
 MAX_ATOMS = 100
 MAX_SUPERCELL_MULTIPLICITY = 2
+MIN_TRAIN_MICROBATCH_ATOMS = 900
+MIN_TRAIN_MICROBATCH_PAIR_SLOTS = 93_750
 
 
 def _short_code_version(version: str) -> str:
@@ -74,10 +76,12 @@ class ConfigProvider:
             max_train_microbatch_atoms=max(
                 physical_batch_plan.max_train_microbatch_atoms,
                 max_physical_graph_atoms,
+                MIN_TRAIN_MICROBATCH_ATOMS,
             ),
             max_train_microbatch_pair_slots=max(
                 physical_batch_plan.max_train_microbatch_pair_slots or 0,
                 max_physical_graph_atoms**2,
+                MIN_TRAIN_MICROBATCH_PAIR_SLOTS,
             ),
         )
         batch_plan = replace(
