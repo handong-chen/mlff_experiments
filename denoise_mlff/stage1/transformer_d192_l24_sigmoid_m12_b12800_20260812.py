@@ -5,7 +5,7 @@ pair is gated independently and the message is averaged over valid atoms,
 instead of using a score-normalized softmax. This makes atom states intensive
 without coupling one edge's gate to the scores of any other edges.
 Each logical batch samples total supercell multiplicity M with probabilities
-P(M=1,2,3)=(0.7, 0.2, 0.1) before atom-budget packing.
+P(M=1,2)=(0.7, 0.3) before atom-budget packing.
 """
 
 from __future__ import annotations
@@ -27,6 +27,8 @@ TRAJECTORY_ID_TRANSFORM = "drop_last_dash_component"
 TARGET_TRAIN_BATCH_ATOMS = 12_800
 FULL_TIER_MICROBATCH_ATOMS = 7_200
 FULL_TIER_MICROBATCH_PAIR_SLOTS = 750_000
+MAX_ATOMS = 100
+MAX_SUPERCELL_MULTIPLICITY = 2
 
 
 def _short_code_version(version: str) -> str:
@@ -65,6 +67,18 @@ class ConfigProvider:
             # sublayer. The deeper model therefore needs lower physical caps
             # even though its width and parameter count are smaller.
             full_budget_pair_slots=FULL_TIER_MICROBATCH_PAIR_SLOTS,
+        )
+        max_physical_graph_atoms = MAX_ATOMS * MAX_SUPERCELL_MULTIPLICITY
+        physical_batch_plan = replace(
+            physical_batch_plan,
+            max_train_microbatch_atoms=max(
+                physical_batch_plan.max_train_microbatch_atoms,
+                max_physical_graph_atoms,
+            ),
+            max_train_microbatch_pair_slots=max(
+                physical_batch_plan.max_train_microbatch_pair_slots or 0,
+                max_physical_graph_atoms**2,
+            ),
         )
         batch_plan = replace(
             physical_batch_plan,
@@ -177,7 +191,7 @@ class ConfigProvider:
                 train_split="train",
                 val_split="val",
                 batch_size=8,
-                max_atoms=100,
+                max_atoms=MAX_ATOMS,
                 max_train_batch_atoms=batch_plan.max_train_batch_atoms,
                 target_train_batch_atoms=batch_plan.target_train_batch_atoms,
                 max_train_microbatch_atoms=batch_plan.max_train_microbatch_atoms,
@@ -187,7 +201,7 @@ class ConfigProvider:
                 elastic_batch_memory_gib=batch_plan.gpu_memory_gib,
                 elastic_batch_tier=batch_plan.tier,
                 train_batch_bucket_size=1024,
-                train_supercell_multiplicity_probabilities=(0.7, 0.2, 0.1),
+                train_supercell_multiplicity_probabilities=(0.7, 0.3),
                 num_workers=4,
                 pin_memory=True,
                 drop_last_train=True,
