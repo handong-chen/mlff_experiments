@@ -32,16 +32,25 @@ TRAJECTORY_ID_TRANSFORM = "drop_last_dash_component"
 TARGET_TRAIN_BATCH_ATOMS = 256_000
 MAX_ATOMS = 100
 MAX_SUPERCELL_MULTIPLICITY = 1
-# Physical-subdivision reference for an 8-GiB-class card.  A real first
-# optimizer step used 2.712 GiB allocated at 1,200 atoms / 45,792 edges on a
-# 7.656-GiB RTX 3060 Ti.  The larger caps are an aggressive throughput choice,
-# not a measured worst-case memory bound.  The same continuous scaling gives
-# about 41,700 atoms / 1.671M edges at 40 GiB and 83,500 / 3.343M at 80 GiB.
-REFERENCE_GPU_MEMORY_GIB = 7.656
-REFERENCE_MICROBATCH_ATOMS = 8_000
-MICROBATCH_ATOM_GRANULARITY = 100
-REFERENCE_MICROBATCH_EDGES = 320_000
-MICROBATCH_EDGE_GRANULARITY = 1_000
+# Physical subdivision only; the 256k logical batch above never changes.  An
+# 8k / 320k first-forward trial reached 7.326 GiB allocated and OOMed on a
+# 7.656-GiB RTX 3060 Ti.  The corrected under-12-GiB tier keeps about 25%
+# headroom by linear interpolation from that trial and the earlier 1.2k / 50k
+# step at 2.712 GiB.  Larger tiers retain the requested aggressive caps.
+MICROBATCH_ATOMS_BY_TIER = {
+    "under_12gb": 6_000,
+    "12_to_23gb": 12_000,
+    "24_to_39gb": 24_000,
+    "40_to_79gb": 40_000,
+    "80gb_plus": 80_000,
+}
+MICROBATCH_EDGES_BY_TIER = {
+    "under_12gb": 240_000,
+    "12_to_23gb": 480_000,
+    "24_to_39gb": 960_000,
+    "40_to_79gb": 1_600_000,
+    "80gb_plus": 3_200_000,
+}
 
 
 def _short_code_version(version: str) -> str:
@@ -79,30 +88,11 @@ class ConfigProvider:
             target_train_batch_atoms=TARGET_TRAIN_BATCH_ATOMS,
             full_budget_memory_gib=80.0,
         )
-        max_physical_graph_atoms = MAX_ATOMS * MAX_SUPERCELL_MULTIPLICITY
-        scaled_microbatch_atoms = min(
-            TARGET_TRAIN_BATCH_ATOMS,
-            max(
-                max_physical_graph_atoms,
-                int(
-                    REFERENCE_MICROBATCH_ATOMS
-                    * batch_plan.gpu_memory_gib
-                    / REFERENCE_GPU_MEMORY_GIB
-                    / MICROBATCH_ATOM_GRANULARITY
-                )
-                * MICROBATCH_ATOM_GRANULARITY,
-            ),
+        scaled_microbatch_atoms = max(
+            MAX_ATOMS * MAX_SUPERCELL_MULTIPLICITY,
+            MICROBATCH_ATOMS_BY_TIER[batch_plan.tier],
         )
-        scaled_microbatch_edges = max(
-            MICROBATCH_EDGE_GRANULARITY,
-            int(
-                REFERENCE_MICROBATCH_EDGES
-                * batch_plan.gpu_memory_gib
-                / REFERENCE_GPU_MEMORY_GIB
-                / MICROBATCH_EDGE_GRANULARITY
-            )
-            * MICROBATCH_EDGE_GRANULARITY,
-        )
+        scaled_microbatch_edges = MICROBATCH_EDGES_BY_TIER[batch_plan.tier]
         batch_plan = replace(
             batch_plan,
             max_train_microbatch_atoms=scaled_microbatch_atoms,
