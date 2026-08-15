@@ -33,23 +33,25 @@ TARGET_TRAIN_BATCH_ATOMS = 256_000
 MAX_ATOMS = 100
 MAX_SUPERCELL_MULTIPLICITY = 1
 # Physical subdivision only; the 256k logical batch above never changes.  An
-# 8k / 320k first-forward trial reached 7.326 GiB allocated and OOMed on a
-# 7.656-GiB RTX 3060 Ti.  The corrected under-12-GiB tier keeps about 25%
-# headroom by linear interpolation from that trial and the earlier 1.2k / 50k
-# step at 2.712 GiB.  Larger tiers retain the requested aggressive caps.
+# 8k / 320k and 6k / 240k first-forward trials saturated a 7.656-GiB RTX
+# 3060 Ti, and a 4k / 160k CPU-staged probe also saturated it.  A four-step
+# 3k / 120k CPU-staged smoke completed 256k-atom logical windows in 86 slices;
+# its peak was 6.588 GiB allocated and its largest sampled slice had 119,826
+# edges.  Larger tiers conservatively round the measured activation slope;
+# they are still starting estimates and require direct monitoring.
 MICROBATCH_ATOMS_BY_TIER = {
-    "under_12gb": 6_000,
-    "12_to_23gb": 12_000,
-    "24_to_39gb": 24_000,
-    "40_to_79gb": 40_000,
-    "80gb_plus": 80_000,
+    "under_12gb": 3_000,
+    "12_to_23gb": 4_000,
+    "24_to_39gb": 9_000,
+    "40_to_79gb": 15_000,
+    "80gb_plus": 30_000,
 }
 MICROBATCH_EDGES_BY_TIER = {
-    "under_12gb": 240_000,
-    "12_to_23gb": 480_000,
-    "24_to_39gb": 960_000,
-    "40_to_79gb": 1_600_000,
-    "80gb_plus": 3_200_000,
+    "under_12gb": 120_000,
+    "12_to_23gb": 160_000,
+    "24_to_39gb": 360_000,
+    "40_to_79gb": 600_000,
+    "80gb_plus": 1_200_000,
 }
 
 
