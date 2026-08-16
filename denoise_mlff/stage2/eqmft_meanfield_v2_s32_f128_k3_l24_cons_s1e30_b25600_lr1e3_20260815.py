@@ -3,9 +3,8 @@
 The transferable trunk has three mean-field tokens, 32 site channels and 128
 field channels in each of the l=0, 1, and 2 sectors.  The supervised model adds
 an invariant per-atom energy readout and obtains forces and stress as
-derivatives of the summed physical energy.  A fixed train-split linear
-per-element reference supplies the composition baseline; the learned head
-models its residual.
+derivatives of the summed physical energy.  A fixed per-atom energy intercept is
+used as the composition-agnostic baseline.
 """
 
 from __future__ import annotations
@@ -24,22 +23,10 @@ TARGET_TRAIN_BATCH_ATOMS = 12_800
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 REFERENCE_GPU_MEMORY_GIB = 5.595
-# A full conservative force-and-stress double backward plus AdamW step on the
-# reference RTX 2060 used 3.562 GiB allocated / 3.602 GiB reserved for 504
-# actual atoms and 14,812 physical edges under this 512-atom cap.  The next
-# 768-atom cap reached 4.459 GiB reserved, so 512 retains material density and
-# allocator headroom before scaling to larger devices.
-REFERENCE_MICROBATCH_ATOMS = 512
+# Calibrated from the same conservative force-and-stress path. We now seed with a
+# larger microbatch atom count to be more aggressive on memory-dense nodes.
+REFERENCE_MICROBATCH_ATOMS = 768
 MICROBATCH_ATOM_GRANULARITY = 16
-LINEAR_REFERENCE_PATH = os.path.join(
-    GRAPH_ROOT,
-    "splits",
-    SPLIT_SCHEME,
-    "train_linear_reference_energy.json",
-)
-EXPECTED_LINEAR_REFERENCE_SHA256 = (
-    "26d1a5b5f56956bf791c67403d451a016f5412177fb2500da94be8799983dbb9"
-)
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
     "denoise_mlff",
@@ -48,6 +35,7 @@ STAGE1_CHECKPOINT = os.path.join(
     "mlff=f5723d2;workshop=9afaf97",
     "epoch_000030.pt",
 )
+ENERGY_HEAD_INIT_BIAS = -6.19
 
 
 def _short_code_version(version: str) -> str:
@@ -72,22 +60,6 @@ def _resolve_code_version_str() -> str:
             for repo, version in get_code_version_from_env().items()
         }
     )
-
-
-def _linear_reference_energies() -> tuple[float, ...]:
-    from remote_import.mlff.data.linear_reference import (
-        coefficient_fingerprint,
-        load_linear_reference,
-    )
-
-    values = load_linear_reference(LINEAR_REFERENCE_PATH, n_elements=119)
-    observed = coefficient_fingerprint(values)
-    if observed != EXPECTED_LINEAR_REFERENCE_SHA256:
-        raise ValueError(
-            "linear-reference coefficient fingerprint mismatch: "
-            f"expected {EXPECTED_LINEAR_REFERENCE_SHA256}, got {observed}"
-        )
-    return tuple(values)
 
 
 class ConfigProvider:
@@ -167,7 +139,8 @@ class ConfigProvider:
                         energy_head_n_layers=2,
                         energy_head_dropout=0.0,
                         energy_head_init_scale=1.0e-3,
-                        linear_reference_energies=_linear_reference_energies(),
+                        energy_head_init_bias=ENERGY_HEAD_INIT_BIAS,
+                        linear_reference_energies=None,
                         energy_scale=None,
                         force_mode="conservative",
                         stress_mode="conservative",
