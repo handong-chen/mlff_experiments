@@ -197,13 +197,6 @@ class ConfigProvider:
                 batch_size=validation_batch_size,
                 max_atoms=MAX_ATOMS,
                 max_train_batch_atoms=batch_plan.max_train_batch_atoms,
-                target_train_batch_atoms=batch_plan.target_train_batch_atoms,
-                max_train_microbatch_atoms=(
-                    batch_plan.max_train_microbatch_atoms
-                ),
-                max_train_microbatch_pair_slots=None,
-                elastic_batch_memory_gib=batch_plan.gpu_memory_gib,
-                elastic_batch_tier=batch_plan.tier,
                 train_batch_bucket_size=16_384,
                 num_workers=4,
                 pin_memory=True,
