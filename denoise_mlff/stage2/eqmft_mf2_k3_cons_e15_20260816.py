@@ -1,4 +1,4 @@
-"""Direct-head Stage-2 EqMFT finetune from stage-1 epoch 20.
+"""Conservative Stage-2 EqMFT finetune from stage-1 epoch 20.
 
 This is a conservative continuation of the mean-field checkpoint with the conservative
 supervised regression head added.
@@ -31,21 +31,21 @@ STAGE1_CHECKPOINT = os.path.join(
     f"epoch_{STAGE1_SOURCE_EPOCH:06d}.pt",
 )
 
-# Empirically scaled physical caps and edge caps used by the source stage-1 run.
+# Conservative memory headroom is tighter than direct-head, so use reduced physical caps.
 MICROBATCH_ATOMS_BY_TIER = {
-    "under_12gb": 768,
-    "12_to_23gb": 1_024,
-    "24_to_39gb": 2_300,
-    "40_to_79gb": 5_000,
-    "80gb_plus": 5_000,
+    "under_12gb": 1_500,
+    "12_to_23gb": 2_000,
+    "24_to_39gb": 4_500,
+    "40_to_79gb": 7_500,
+    "80gb_plus": 20_000,
 }
 
 MICROBATCH_PAIR_SLOTS_BY_TIER = {
-    "under_12gb": 30_000,
-    "12_to_23gb": 40_000,
-    "24_to_39gb": 90_000,
-    "40_to_79gb": 200_000,
-    "80gb_plus": 300_000,
+    "under_12gb": 60_000,
+    "12_to_23gb": 80_000,
+    "24_to_39gb": 180_000,
+    "40_to_79gb": 300_000,
+    "80gb_plus": 800_000,
 }
 
 def _validate_every_steps(max_microbatch_atoms: int, target_train_batch_atoms: int) -> int:
