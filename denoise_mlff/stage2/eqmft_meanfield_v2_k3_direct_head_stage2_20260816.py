@@ -19,17 +19,9 @@ SPLIT_SCHEME = "train98_val1_test1_seed0"
 TARGET_TRAIN_BATCH_ATOMS = 256_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
-LINEAR_REFERENCE_PATH = os.path.join(
-    GRAPH_ROOT,
-    "splits",
-    SPLIT_SCHEME,
-    "train_linear_reference_energy.json",
-)
-EXPECTED_LINEAR_REFERENCE_SHA256 = (
-    "26d1a5b5f56956bf791c67403d451a016f5412177fb2500da94be8799983dbb9"
-)
+ENERGY_HEAD_INIT_BIAS = -6.19
 
-STAGE1_SOURCE_EPOCH = 15
+STAGE1_SOURCE_EPOCH = 20
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
     "denoise_mlff",
@@ -55,23 +47,6 @@ MICROBATCH_PAIR_SLOTS_BY_TIER = {
     "40_to_79gb": 600_000,
     "80gb_plus": 600_000,
 }
-
-
-
-def _linear_reference_energies() -> tuple[float, ...]:
-    from remote_import.mlff.data.linear_reference import (
-        coefficient_fingerprint,
-        load_linear_reference,
-    )
-
-    values = load_linear_reference(LINEAR_REFERENCE_PATH, n_elements=119)
-    observed = coefficient_fingerprint(values)
-    if observed != EXPECTED_LINEAR_REFERENCE_SHA256:
-        raise ValueError(
-            "linear-reference coefficient fingerprint mismatch: "
-            f"expected {EXPECTED_LINEAR_REFERENCE_SHA256}, got {observed}"
-        )
-    return tuple(values)
 
 def _validate_every_steps(max_microbatch_atoms: int, target_train_batch_atoms: int) -> int:
     """Aim for about 10 validation probes per target epoch."""
@@ -177,7 +152,8 @@ class ConfigProvider:
                         energy_head_n_layers=2,
                         energy_head_dropout=0.0,
                         energy_head_init_scale=1.0e-3,
-                        linear_reference_energies=_linear_reference_energies(),
+                        linear_reference_energies=None,
+                        energy_head_init_bias=ENERGY_HEAD_INIT_BIAS,
                         energy_scale=None,
                         force_mode="conservative",
                         stress_mode="conservative",
