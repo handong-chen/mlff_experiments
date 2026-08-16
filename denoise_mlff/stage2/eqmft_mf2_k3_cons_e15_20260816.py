@@ -1,6 +1,6 @@
 """Direct-head Stage-2 EqMFT finetune from stage-1 epoch 20.
 
-This is a direct-head continuation of the mean-field checkpoint with the conservative
+This is a conservative continuation of the mean-field checkpoint with the conservative
 supervised regression head added.
 """
 
@@ -32,19 +32,19 @@ STAGE1_CHECKPOINT = os.path.join(
 
 # Empirically scaled physical caps and edge caps used by the source stage-1 run.
 MICROBATCH_ATOMS_BY_TIER = {
-    "under_12gb": 3_000,
-    "12_to_23gb": 4_000,
-    "24_to_39gb": 9_000,
-    "40_to_79gb": 15_000,
-    "80gb_plus": 15_000,
+    "under_12gb": 768,
+    "12_to_23gb": 1_024,
+    "24_to_39gb": 2_300,
+    "40_to_79gb": 5_000,
+    "80gb_plus": 5_000,
 }
 
 MICROBATCH_PAIR_SLOTS_BY_TIER = {
-    "under_12gb": 120_000,
-    "12_to_23gb": 160_000,
-    "24_to_39gb": 360_000,
-    "40_to_79gb": 600_000,
-    "80gb_plus": 600_000,
+    "under_12gb": 30_000,
+    "12_to_23gb": 40_000,
+    "24_to_39gb": 90_000,
+    "40_to_79gb": 200_000,
+    "80gb_plus": 300_000,
 }
 
 
