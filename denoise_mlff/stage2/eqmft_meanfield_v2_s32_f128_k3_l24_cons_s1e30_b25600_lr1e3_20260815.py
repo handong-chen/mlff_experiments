@@ -23,9 +23,10 @@ TARGET_TRAIN_BATCH_ATOMS = 12_800
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 REFERENCE_GPU_MEMORY_GIB = 5.595
-# Calibrated from the same conservative force-and-stress path, but held to the
-# stage-2 EqMFT baseline (512) so this config is stable on 7-8 GiB nodes.
-REFERENCE_MICROBATCH_ATOMS = 512
+# Calibrated from the same conservative force-and-stress path, and aggressively
+# reduced for 7-8 GiB nodes to avoid first-batch CUDA OOM in conservative
+# forward/backward.
+REFERENCE_MICROBATCH_ATOMS = 256
 MICROBATCH_ATOM_GRANULARITY = 16
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
