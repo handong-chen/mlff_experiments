@@ -216,7 +216,7 @@ class ConfigProvider:
                 loss=dict(
                     energy_weight=0.05,
                     force_weight=0.05,
-                    stress_weight=0.0125,
+                    stress_weight=0.125,
                     force_scale_eVA=1.0,
                     stress_scale_eVA3=1.0,
                     energy_scale_eV_per_atom=1.0,
