@@ -36,7 +36,15 @@ MICROBATCH_ATOMS_BY_TIER = {
     "12_to_23gb": 4_000,
     "24_to_39gb": 9_000,
     "40_to_79gb": 15_000,
-    "80gb_plus": 30_000,
+    "80gb_plus": 15_000,
+}
+
+MICROBATCH_PAIR_SLOTS_BY_TIER = {
+    "under_12gb": 120_000,
+    "12_to_23gb": 160_000,
+    "24_to_39gb": 360_000,
+    "40_to_79gb": 600_000,
+    "80gb_plus": 600_000,
 }
 
 
@@ -83,7 +91,7 @@ class ConfigProvider:
                 MAX_ATOMS,
                 scaled_microbatch_atoms,
             ),
-            max_train_microbatch_pair_slots=None,
+            max_train_microbatch_pair_slots=MICROBATCH_PAIR_SLOTS_BY_TIER[batch_plan.tier],
         )
         print_elastic_batch_plan(batch_plan)
 
