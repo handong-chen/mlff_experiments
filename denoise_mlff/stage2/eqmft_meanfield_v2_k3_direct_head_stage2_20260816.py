@@ -16,7 +16,7 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 25_600
+TARGET_TRAIN_BATCH_ATOMS = 256_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 ENERGY_HEAD_INIT_BIAS = -6.19
@@ -38,7 +38,7 @@ MICROBATCH_ATOMS_BY_TIER = {
     "12_to_23gb": 4_000,
     "24_to_39gb": 9_000,
     "40_to_79gb": 15_000,
-    "80gb_plus": 40_000,
+    "80gb_plus": 30_000,
 }
 
 MICROBATCH_PAIR_SLOTS_BY_TIER = {
@@ -46,7 +46,7 @@ MICROBATCH_PAIR_SLOTS_BY_TIER = {
     "12_to_23gb": 160_000,
     "24_to_39gb": 360_000,
     "40_to_79gb": 600_000,
-    "80gb_plus": 1_600_000,
+    "80gb_plus": 1_200_000,
 }
 
 def _validate_every_steps(max_microbatch_atoms: int, target_train_batch_atoms: int) -> int:
