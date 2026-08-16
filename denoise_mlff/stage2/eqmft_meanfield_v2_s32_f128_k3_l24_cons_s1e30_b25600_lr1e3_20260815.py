@@ -183,7 +183,6 @@ class ConfigProvider:
                 save_every_epochs=1,
                 keep_last_checkpoints=None,
                 amp=False,
-                float32_matmul_precision="high",
                 compile_model=False,
                 compile_mode="default",
                 compile_dynamic=True,
