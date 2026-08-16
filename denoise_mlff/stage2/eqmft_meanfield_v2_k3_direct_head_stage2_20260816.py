@@ -1,4 +1,4 @@
-"""Direct-head Stage-2 EqMFT finetune from stage-1 epoch 15.
+"""Direct-head Stage-2 EqMFT finetune from stage-1 epoch 20.
 
 This is a direct-head continuation of the mean-field checkpoint with the conservative
 supervised regression head added.
@@ -20,7 +20,7 @@ TARGET_TRAIN_BATCH_ATOMS = 256_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 
-STAGE1_SOURCE_EPOCH = 15
+STAGE1_SOURCE_EPOCH = 20
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
     "denoise_mlff",
