@@ -189,6 +189,17 @@ class ConfigProvider:
                 compile_dynamic=True,
                 ema_decay=0.0,
             ),
+            corruption=dict(
+                name="remote_import.mlff.data.build_position_corruptor",
+                params=dict(
+                    config=dict(
+                        sigma_position_max="from_preprocess",
+                        t_sampling="uniform",
+                        species_corruption_rate_max=0.0,
+                        position_target="denoise",
+                    ),
+                ),
+            ),
             supervised=dict(
                 graph_root=None,
                 graph_roots=(GRAPH_ROOT,),
