@@ -23,8 +23,6 @@ MAX_ATOMS = 100
 REFERENCE_GPU_MEMORY_GIB = 8.0
 REFERENCE_MICROBATCH_ATOMS = 1_700
 MICROBATCH_ATOM_GRANULARITY = 100
-REFERENCE_MICROBATCH_EDGES = 44_000
-MICROBATCH_EDGE_GRANULARITY = 1_000
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
     "denoise_mlff",
@@ -78,16 +76,6 @@ class ConfigProvider:
                 * MICROBATCH_ATOM_GRANULARITY,
             ),
         )
-        scaled_microbatch_edges = max(
-            MICROBATCH_EDGE_GRANULARITY,
-            int(
-                REFERENCE_MICROBATCH_EDGES
-                * batch_plan.gpu_memory_gib
-                / REFERENCE_GPU_MEMORY_GIB
-                / MICROBATCH_EDGE_GRANULARITY
-            )
-            * MICROBATCH_EDGE_GRANULARITY,
-        )
         batch_plan = replace(
             batch_plan,
             max_train_microbatch_atoms=scaled_microbatch_atoms,
@@ -101,7 +89,7 @@ class ConfigProvider:
         print_elastic_batch_plan(batch_plan)
         print(
             "[denoise-mlff][elastic-wgt] "
-            f"max_train_microbatch_edges={scaled_microbatch_edges}",
+            f"max_train_microbatch_atoms={batch_plan.max_train_microbatch_atoms}",
             flush=True,
         )
         output_dir = os.path.join(
@@ -223,7 +211,6 @@ class ConfigProvider:
                 target_train_batch_atoms=batch_plan.target_train_batch_atoms,
                 max_train_microbatch_atoms=batch_plan.max_train_microbatch_atoms,
                 max_train_microbatch_pair_slots=None,
-                max_train_microbatch_edges=scaled_microbatch_edges,
                 elastic_batch_memory_gib=batch_plan.gpu_memory_gib,
                 elastic_batch_tier=batch_plan.tier,
                 train_batch_bucket_size=None,

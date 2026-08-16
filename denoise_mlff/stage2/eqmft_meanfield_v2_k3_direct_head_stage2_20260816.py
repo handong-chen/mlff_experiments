@@ -47,14 +47,6 @@ MICROBATCH_PAIR_SLOTS_BY_TIER = {
     "80gb_plus": 600_000,
 }
 
-MICROBATCH_EDGES_BY_TIER = {
-    "under_12gb": 120_000,
-    "12_to_23gb": 160_000,
-    "24_to_39gb": 360_000,
-    "40_to_79gb": 600_000,
-    "80gb_plus": 600_000,
-}
-
 
 def _short_code_version(version: str) -> str:
     if version.startswith("local://"):
@@ -92,7 +84,6 @@ class ConfigProvider:
             full_budget_memory_gib=80.0,
         )
         scaled_microbatch_atoms = MICROBATCH_ATOMS_BY_TIER[batch_plan.tier]
-        scaled_microbatch_edges = MICROBATCH_EDGES_BY_TIER[batch_plan.tier]
         batch_plan = replace(
             batch_plan,
             max_train_batch_atoms=TARGET_TRAIN_BATCH_ATOMS,
@@ -211,7 +202,6 @@ class ConfigProvider:
                     batch_plan.max_train_microbatch_atoms
                 ),
                 max_train_microbatch_pair_slots=None,
-                max_train_microbatch_edges=scaled_microbatch_edges,
                 elastic_batch_memory_gib=batch_plan.gpu_memory_gib,
                 elastic_batch_tier=batch_plan.tier,
                 train_batch_bucket_size=None,

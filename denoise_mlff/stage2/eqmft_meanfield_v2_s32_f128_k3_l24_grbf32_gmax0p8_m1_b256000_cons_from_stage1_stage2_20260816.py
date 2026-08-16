@@ -39,20 +39,13 @@ EXPECTED_LINEAR_REFERENCE_SHA256 = (
     "26d1a5b5f56956bf791c67403d451a016f5412177fb2500da94be8799983dbb9"
 )
 
-# Empirically scaled physical caps and edge caps used by the source stage-1 run.
+# Empirically scaled physical caps used by the source stage-1 run.
 MICROBATCH_ATOMS_BY_TIER = {
     "under_12gb": 3_000,
     "12_to_23gb": 4_000,
     "24_to_39gb": 9_000,
     "40_to_79gb": 15_000,
     "80gb_plus": 30_000,
-}
-MICROBATCH_EDGES_BY_TIER = {
-    "under_12gb": 120_000,
-    "12_to_23gb": 160_000,
-    "24_to_39gb": 360_000,
-    "40_to_79gb": 600_000,
-    "80gb_plus": 1_200_000,
 }
 
 
@@ -108,7 +101,6 @@ class ConfigProvider:
             full_budget_memory_gib=80.0,
         )
         scaled_microbatch_atoms = MICROBATCH_ATOMS_BY_TIER[batch_plan.tier]
-        scaled_microbatch_edges = MICROBATCH_EDGES_BY_TIER[batch_plan.tier]
         batch_plan = replace(
             batch_plan,
             max_train_batch_atoms=TARGET_TRAIN_BATCH_ATOMS,
@@ -121,7 +113,7 @@ class ConfigProvider:
         print_elastic_batch_plan(batch_plan)
         print(
             "[denoise-mlff][elastic-eqmft-stage2] "
-            f"max_train_microbatch_edges={scaled_microbatch_edges}",
+            f"max_train_microbatch_atoms={batch_plan.max_train_microbatch_atoms}",
             flush=True,
         )
 
@@ -232,7 +224,6 @@ class ConfigProvider:
                     batch_plan.max_train_microbatch_atoms
                 ),
                 max_train_microbatch_pair_slots=None,
-                max_train_microbatch_edges=scaled_microbatch_edges,
                 elastic_batch_memory_gib=batch_plan.gpu_memory_gib,
                 elastic_batch_tier=batch_plan.tier,
                 train_batch_bucket_size=None,
