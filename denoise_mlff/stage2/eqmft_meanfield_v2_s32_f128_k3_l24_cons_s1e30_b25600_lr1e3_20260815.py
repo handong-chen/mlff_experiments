@@ -211,7 +211,7 @@ class ConfigProvider:
                 sampling_seed=42,
                 max_train_batches=None,
                 max_val_batches=VALIDATION_SAMPLE_CAP // validation_batch_size,
-                validate_every_steps=500,
+                validate_every_steps=250,
                 random_rotation_train=True,
                 loss=dict(
                     energy_weight=0.05,
