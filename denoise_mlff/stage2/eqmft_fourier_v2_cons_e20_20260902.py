@@ -25,10 +25,9 @@ TARGET_TRAIN_BATCH_ATOMS = 12_800
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 REFERENCE_GPU_MEMORY_GIB = 5.595
-# Starting cap inherited from the existing dynamic-Fourier conservative
-# provider, not from a v2 measurement.  Each GPU tier requires a representative
-# first-optimizer-step memory check before a serious launch.
-REFERENCE_MICROBATCH_ATOMS = 192
+# Increased from the inherited dynamic-Fourier conservative cap after an A100
+# 80GB run showed substantial memory and utilization headroom.
+REFERENCE_MICROBATCH_ATOMS = 512
 MICROBATCH_ATOM_GRANULARITY = 16
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
