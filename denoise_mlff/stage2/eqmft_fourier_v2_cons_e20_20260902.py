@@ -21,13 +21,13 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 12_800
+TARGET_TRAIN_BATCH_ATOMS = 12_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 REFERENCE_GPU_MEMORY_GIB = 5.595
 # Increased from the inherited dynamic-Fourier conservative cap after an A100
 # 80GB run showed substantial memory and utilization headroom.
-REFERENCE_MICROBATCH_ATOMS = 512
+REFERENCE_MICROBATCH_ATOMS = 864
 MICROBATCH_ATOM_GRANULARITY = 16
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
