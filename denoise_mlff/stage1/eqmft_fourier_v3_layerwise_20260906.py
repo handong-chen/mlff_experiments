@@ -6,9 +6,10 @@ the learned site scalars in the existing width256 geometry MLP. Local refresh
 occurs before each mean-field layer; Fourier refresh remains after that layer.
 No site-resolved fields or additional transport branch.
 
-All sparse-v3 widths, cutoff, optimizer, data split, logical atom budget, and
-physical subdivision caps are retained. The inherited caps are starting limits,
-not measured capacities for this layerwise v3 configuration.
+All sparse-v3 widths, cutoff, optimizer, data split, and logical atom budget
+are retained. The 80 GB physical caps target an estimated 74 GiB allocated
+peak from local memory accounting; A100 confirmation is pending. Other tiers
+retain the inherited, unvalidated sparse-v3 physical caps.
 """
 
 from __future__ import annotations
@@ -30,21 +31,22 @@ TRAJECTORY_ID_TRANSFORM = "drop_last_dash_component"
 TARGET_TRAIN_BATCH_ATOMS = 25_600
 MAX_ATOMS = 100
 MAX_SUPERCELL_MULTIPLICITY = 1
-# Inherited sparse-v3 starting limits, not measured layerwise-v3 capacities.
-# Profile the added refresh activations before a serious launch.
+# The 80 GB caps are provisional estimates from the 2026-09-06 memory study.
+# Confirm on A100 before treating them as validated capacities.
+# Other tiers retain unvalidated sparse-v3 starting limits.
 MICROBATCH_ATOMS_BY_TIER = {
     "under_12gb": 1_800,
     "12_to_23gb": 4_000,
     "24_to_39gb": 8_000,
     "40_to_79gb": 16_000,
-    "80gb_plus": 25_600,
+    "80gb_plus": 19_200,
 }
 MICROBATCH_EDGES_BY_TIER = {
     "under_12gb": 72_000,
     "12_to_23gb": 160_000,
     "24_to_39gb": 320_000,
     "40_to_79gb": 640_000,
-    "80gb_plus": 1_024_000,
+    "80gb_plus": 768_000,
 }
 
 
