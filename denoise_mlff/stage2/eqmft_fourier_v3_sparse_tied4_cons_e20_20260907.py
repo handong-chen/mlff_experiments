@@ -6,13 +6,11 @@ The complete trunk is transferred, including local and Fourier refreshes at
 layers 0, 4, 8, 12, 16, and 20. A fresh invariant energy readout supplies
 physical energies and their conservative force/stress derivatives.
 
-Physical atom caps use the matched Fourier-v2 Stage-2/Stage-1 80GB ratio:
-12,000 / 25,600 = 15/32. Apply it to this sibling's Stage-1 tier caps,
-rounding down to multiples of 16. These are config-derived starting limits,
-not new peak-memory measurements. The logical optimizer batch stays at
-12,000 atoms; smaller physical caps subdivide it without changing the schedule.
-The loss, optimizer, 50-epoch duration, and schedule follow
-eqmft_fourier_v2_cons_e20_20260902.
+Physical microbatch caps are calibrated from real shuffled graph-mmap
+conservative forward/backward peaks against the matched Fourier-v2 Stage-2
+control. The logical optimizer batch remains 12,000 atoms; smaller physical
+caps subdivide it without changing the schedule. The loss, optimizer, 50-epoch
+duration, and schedule follow eqmft_fourier_v2_cons_e20_20260902.
 """
 
 from __future__ import annotations
@@ -30,15 +28,16 @@ SPLIT_SCHEME = "train98_val1_test1_seed0"
 TARGET_TRAIN_BATCH_ATOMS = 12_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
-# Budget reference: stage1/eqmft_fourier_v2_20260901.py and
-# stage2/eqmft_fourier_v2_cons_e20_20260902.py.
-# Stage-1 physical atom caps: 1,800 / 4,000 / 8,000 / 16,000 / 25,600.
+# The 506-atom conservative peak is 3.528 GiB versus 2.740 GiB for the
+# matching Fourier-v2 Stage-2 control. At 80GB, use
+# floor(12,000 * 2.740 / 3.528 / 16) * 16 = 9_312; lower tiers retain
+# existing values when they are already no larger.
 MICROBATCH_ATOMS_BY_TIER = {
-    "under_12gb": 832,
+    "under_12gb": 704,
     "12_to_23gb": 1_872,
     "24_to_39gb": 3_744,
     "40_to_79gb": 7_488,
-    "80gb_plus": 12_000,
+    "80gb_plus": 9_312,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
