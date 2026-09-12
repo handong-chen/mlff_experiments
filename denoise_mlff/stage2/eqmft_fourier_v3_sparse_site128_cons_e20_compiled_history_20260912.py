@@ -19,16 +19,20 @@ SPLIT_SCHEME = "train98_val1_test1_seed0"
 TARGET_TRAIN_BATCH_ATOMS = 12_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
-# floor(site64_stage2_cap / 2 / 16) * 16 for each tier. The source caps
-# are 560, 1_312, 2_624, 5_248, and 7_408 after the Stage-2 OOM corrections.
-# Estimated physical atom budgets with compiled fields + history enabled.
-# 80 GB packing targets: site32 one call, site64 two, site128 three per 12k atoms.
+# Compiled-field + history physical atom capacities.
+# The 80GB site128 screenshot sampled 37.1 GiB GPU use at a 4,096-atom cap.
+# Linear planning estimate for 6,144: 37.1 * 6,144 / 4,096 = 55.65 GiB,
+# not a worst-case capacity measurement. With at most 100 atoms per graph,
+# 6,144 guarantees at most two calls per 12,000-atom logical batch.
+# 8,192 would still need two calls and would increase fixed field padding.
+# The 400-atom cap peaked at 4.810 GiB allocated in the full-batch 6GiB run;
+# that is a tested fit, not a capacity guarantee for every GPU under 12GiB.
 MICROBATCH_ATOMS_BY_TIER = {
-    "under_12gb": 320,
+    "under_12gb": 400,
     "12_to_23gb": 768,
     "24_to_39gb": 1536,
     "40_to_79gb": 3200,
-    "80gb_plus": 4096,
+    "80gb_plus": 6144,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,

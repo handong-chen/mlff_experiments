@@ -19,12 +19,10 @@ SPLIT_SCHEME = "train98_val1_test1_seed0"
 TARGET_TRAIN_BATCH_ATOMS = 12_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
-# The 506-atom conservative peak is 3.594 GiB versus 2.740 GiB for the
-# matching Fourier-v2 Stage-2 control. At 80GB, use
-# floor(12,000 * 2.740 / 3.594 / 16) * 16 = 9_136; lower tiers retain
-# existing values when they are already no larger.
-# Estimated physical atom budgets with compiled fields + history enabled.
-# 80 GB packing targets: site32 one call, site64 two, site128 three per 12k atoms.
+# Compiled-field + history physical atom capacities.
+# At 80GB the full 12,000-atom logical batch already takes one physical call.
+# A larger padding capacity cannot remove another call; keep the logical batch
+# and its optimizer/scheduler semantics unchanged. Other tiers retain estimates.
 MICROBATCH_ATOMS_BY_TIER = {
     "under_12gb": 768,
     "12_to_23gb": 2112,
