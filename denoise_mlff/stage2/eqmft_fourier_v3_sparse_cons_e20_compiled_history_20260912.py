@@ -1,7 +1,7 @@
 """Compiled-field and history-memory stage-2 sibling; canonical provider unchanged.
 
 Budget estimates include fixed-capacity field padding, not an A100 capacity test.
-The logical optimizer batch remains 12,000 atoms.
+The logical optimizer batch is 16,000 atoms, with a rescaled step scheduler.
 """
 
 from __future__ import annotations
@@ -16,19 +16,20 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 12_000
+TARGET_TRAIN_BATCH_ATOMS = 16_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 # Compiled-field + history physical atom capacities.
-# At 80GB the full 12,000-atom logical batch already takes one physical call.
-# A larger padding capacity cannot remove another call; keep the logical batch
-# and its optimizer/scheduler semantics unchanged. Other tiers retain estimates.
+# At 80GB, match the 16,000-atom logical batch to retain one physical call.
+# This raises the previous 12,000-atom capacity by one third; it is a planning
+# estimate, not a measured A100 fit. Other GPU tiers retain their physical caps
+# and accumulate the larger logical batch.
 MICROBATCH_ATOMS_BY_TIER = {
     "under_12gb": 768,
     "12_to_23gb": 2112,
     "24_to_39gb": 4096,
     "40_to_79gb": 6144,
-    "80gb_plus": 12000,
+    "80gb_plus": 16000,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
@@ -172,8 +173,10 @@ class ConfigProvider:
                 params=dict(
                     name="exp_warmup",
                     params=dict(
-                        warmup_steps=1_537,
-                        decay_steps=30_754,
+                        # Preserve approximate atom exposure: old steps *
+                        # 12,000 / 16,000, rounded to the nearest step.
+                        warmup_steps=1_153,
+                        decay_steps=23_066,
                         min_lr_ratio=0.01,
                     ),
                     interval="step",

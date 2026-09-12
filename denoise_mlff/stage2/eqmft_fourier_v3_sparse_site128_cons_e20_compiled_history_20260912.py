@@ -1,7 +1,7 @@
 """Compiled-field and history-memory stage-2 sibling; canonical provider unchanged.
 
 Budget estimates include fixed-capacity field padding, not an A100 capacity test.
-The logical optimizer batch remains 12,000 atoms.
+The logical optimizer batch is 16,000 atoms, with a rescaled step scheduler.
 """
 
 from __future__ import annotations
@@ -16,15 +16,15 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 12_000
+TARGET_TRAIN_BATCH_ATOMS = 16_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 # Compiled-field + history physical atom capacities.
-# The 80GB site128 screenshot sampled 37.1 GiB GPU use at a 4,096-atom cap.
-# Linear planning estimate for 6,144: 37.1 * 6,144 / 4,096 = 55.65 GiB,
-# not a worst-case capacity measurement. With at most 100 atoms per graph,
-# 6,144 guarantees at most two calls per 12,000-atom logical batch.
-# 8,192 would still need two calls and would increase fixed field padding.
+# The previous 4,096-atom run used roughly 32 GiB allocated GPU memory.
+# Linear planning estimate for 8,192 atoms: roughly 64 GiB allocated,
+# not a measured peak or capacity guarantee. With at most 100 atoms per graph,
+# 8,192 fits a full 16,000-atom logical batch in two nearly full physical calls.
+# Other GPU tiers retain their physical caps and accumulate the larger batch.
 # The 400-atom cap peaked at 4.810 GiB allocated in the full-batch 6GiB run;
 # that is a tested fit, not a capacity guarantee for every GPU under 12GiB.
 MICROBATCH_ATOMS_BY_TIER = {
@@ -32,7 +32,7 @@ MICROBATCH_ATOMS_BY_TIER = {
     "12_to_23gb": 768,
     "24_to_39gb": 1536,
     "40_to_79gb": 3200,
-    "80gb_plus": 6144,
+    "80gb_plus": 8192,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
@@ -177,8 +177,10 @@ class ConfigProvider:
                 params=dict(
                     name="exp_warmup",
                     params=dict(
-                        warmup_steps=1_537,
-                        decay_steps=30_754,
+                        # Preserve approximate atom exposure: old steps *
+                        # 12,000 / 16,000, rounded to the nearest step.
+                        warmup_steps=1_153,
+                        decay_steps=23_066,
                         min_lr_ratio=0.01,
                     ),
                     interval="step",

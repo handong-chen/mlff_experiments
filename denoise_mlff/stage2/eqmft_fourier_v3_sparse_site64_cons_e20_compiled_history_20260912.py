@@ -1,7 +1,7 @@
 """Compiled-field and history-memory stage-2 sibling; canonical provider unchanged.
 
 Budget estimates include fixed-capacity field padding, not an A100 capacity test.
-The logical optimizer batch remains 12,000 atoms.
+The logical optimizer batch is 16,000 atoms, with a rescaled step scheduler.
 
 The untied site64 checkpoint path follows the requested naming convention;
 checkpoint existence is not asserted by this provider.
@@ -19,20 +19,22 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 12_000
+TARGET_TRAIN_BATCH_ATOMS = 16_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 # Compiled-field + history physical atom capacities.
-# At 80GB, 6,144 atoms gives at most two calls per 12,000-atom logical batch.
-# Intermediate increases only add field padding without removing a call.
-# A one-call 12,000-atom fit is unmeasured for site64; shared fields remain
-# 128-wide, so do not assume all memory halves relative to site128.
+# At 80GB, with at most 100 atoms per graph, an 8,192-atom cap fits a full
+# 16,000-atom logical batch in two nearly full physical calls. This capacity
+# is a planning estimate, not a measured A100 fit. A one-call 16,000-atom fit
+# is unmeasured; shared fields remain 128-wide, so memory does not simply
+# halve relative to site128. Other GPU tiers retain their physical caps
+# and accumulate the larger logical batch.
 MICROBATCH_ATOMS_BY_TIER = {
     "under_12gb": 640,
     "12_to_23gb": 1536,
     "24_to_39gb": 3072,
     "40_to_79gb": 4096,
-    "80gb_plus": 6144,
+    "80gb_plus": 8192,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
@@ -177,8 +179,10 @@ class ConfigProvider:
                 params=dict(
                     name="exp_warmup",
                     params=dict(
-                        warmup_steps=1_537,
-                        decay_steps=30_754,
+                        # Preserve approximate atom exposure: old steps *
+                        # 12,000 / 16,000, rounded to the nearest step.
+                        warmup_steps=1_153,
+                        decay_steps=23_066,
                         min_lr_ratio=0.01,
                     ),
                     interval="step",
