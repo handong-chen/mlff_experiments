@@ -1,10 +1,11 @@
 """Compiled-replay and history stage-2 sibling; source provider unchanged.
 
-Preserves the epoch-20 initializer, model, optimizer, data and batch budgets of
+Preserves the epoch-20 initializer, model, optimizer and data of
 eqmft_fourier_v3_sparse_site128_cons_e20_compiled_history_20260912.
-Each bounded shape profile compiles its derivative programs before CUDA replay.
-Inherited batch caps are not a compiled-replay capacity test. Use mlff:6b3adf3
-or later for the current execution implementations.
+Uses shared compiled programs and replay buffers with mlff:0cdb8f0 or later.
+The A100 budget targets roughly 75 GiB from the observed 47 GiB device usage
+at 6,144 physical atoms; this extrapolation is not a measured capacity limit.
+Scheduler step counts preserve approximate atom exposure after the budget change.
 """
 
 from __future__ import annotations
@@ -19,19 +20,21 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 12_288
+# Leave 128 atoms below two A100 physical caps for whole-graph packing
+# (at most 100 atoms per graph), rather than creating a tiny third microbatch.
+TARGET_TRAIN_BATCH_ATOMS = 19_328
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
-# Keep lower-tier physical caps; reduce the 80 GiB cap after the replay OOM.
-# These caps are not validated for compiled replay: its resident cache grows
-# with the encountered graph/site shape profiles. No budget increase is inferred
-# from the local fixed-batch measurement.
+# A100, mlff:0cdb8f0, epoch 1 step 100: 43.995 GiB peak allocated and
+# approximately 47 GiB device usage at 6,144 physical atoms. Scaling to
+# 9,728 atoms gives 47 * 9,728 / 6,144 = 74.4 GiB estimated device usage.
+# Keep lower-tier physical caps unchanged; validate the new A100 peak in-run.
 MICROBATCH_ATOMS_BY_TIER = {
     "under_12gb": 400,
     "12_to_23gb": 768,
     "24_to_39gb": 1536,
     "40_to_79gb": 3200,
-    "80gb_plus": 6144,
+    "80gb_plus": 9728,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
@@ -176,10 +179,10 @@ class ConfigProvider:
                 params=dict(
                     name="exp_warmup",
                     params=dict(
-                        # Preserve approximate atom exposure: old steps *
-                        # 12,000 / 16,000, rounded to the nearest step.
-                        warmup_steps=1_153,
-                        decay_steps=23_066,
+                        # Preserve approximate atom exposure: previous steps
+                        # * 12,288 / 19,328, rounded to the nearest step.
+                        warmup_steps=733,
+                        decay_steps=14_664,
                         min_lr_ratio=0.01,
                     ),
                     interval="step",
