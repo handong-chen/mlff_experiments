@@ -19,10 +19,10 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 16_000
+TARGET_TRAIN_BATCH_ATOMS = 12_288
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
-# Preserve the source compiled-field + history physical caps for this sibling.
+# Keep lower-tier physical caps; reduce the 80 GiB cap after the replay OOM.
 # These caps are not validated for compiled replay: its resident cache grows
 # with the encountered graph/site shape profiles. No budget increase is inferred
 # from the local fixed-batch measurement.
@@ -31,7 +31,7 @@ MICROBATCH_ATOMS_BY_TIER = {
     "12_to_23gb": 768,
     "24_to_39gb": 1536,
     "40_to_79gb": 3200,
-    "80gb_plus": 8192,
+    "80gb_plus": 6144,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
