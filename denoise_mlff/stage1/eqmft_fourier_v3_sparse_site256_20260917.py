@@ -6,11 +6,12 @@ invariant MLP widths double to 1024 and position readout width to 512.
 Field channels remain 128. All 24 layers remain independent, with local
 and Fourier refresh every four layers.
 
-Physical atom/edge caps start at approximately 40% of the site128 caps:
-allow roughly 2x width-dependent activations with additional headroom for
-larger parameter/optimizer state. This is a conservative starting estimate,
-not a measured memory footprint or certified OOM-free capacity. Logical
-batch targets, refresh schedules, data, and optimization are unchanged.
+Smaller-GPU physical caps remain at approximately 40% of the site128 caps.
+The 80 GB tier increases its initial 3900-atom/156000-edge caps by 1.5x
+after observed usage of about 46 GB, targeting roughly 69 GB under linear
+scaling. The new peak is an estimate, not a measured or certified OOM-free
+capacity. Logical batch targets, refresh schedules, data, and optimization
+are unchanged.
 """
 
 from __future__ import annotations
@@ -32,7 +33,8 @@ TRAJECTORY_ID_TRANSFORM = "drop_last_dash_component"
 TARGET_TRAIN_BATCH_ATOMS = 25_600
 MAX_ATOMS = 100
 MAX_SUPERCELL_MULTIPLICITY = 1
-# Approximately 40% of the site128 physical budgets, rounded down.
+# Smaller tiers: approximately 40% of site128 physical budgets, rounded down.
+# 80 GB tier: 1.5x the initial site256 caps after about 46 GB observed usage.
 # Preserve the logical batch target via physical microbatch accumulation.
 # Wider-model fixed storage makes small-GPU capacity especially uncertain.
 MICROBATCH_ATOMS_BY_TIER = {
@@ -40,14 +42,14 @@ MICROBATCH_ATOMS_BY_TIER = {
     "12_to_23gb": 600,
     "24_to_39gb": 1_200,
     "40_to_79gb": 2_400,
-    "80gb_plus": 3_900,
+    "80gb_plus": 5_850,
 }
 MICROBATCH_EDGES_BY_TIER = {
     "under_12gb": 11_200,
     "12_to_23gb": 24_000,
     "24_to_39gb": 48_000,
     "40_to_79gb": 96_000,
-    "80gb_plus": 156_000,
+    "80gb_plus": 234_000,
 }
 
 
