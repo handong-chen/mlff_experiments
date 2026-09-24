@@ -2,10 +2,11 @@
 
 Uses the original bond features without an extra endpoint projection. The shared
 energy-head settings apply to both atom and bond readouts. Keeps the Stage-1
-epoch-20 checkpoint, compiled fields, history optimization, LR schedule, and
-batch budgets of the bond baseline. The inherited budget OOMed with the wider,
-shallower head; memory fit for this sibling has not been measured. Use
-mlff:f4ba2ec or later for the factorized bond readout.
+epoch-20 checkpoint, compiled fields, and history optimization. After this
+sibling OOMed, the logical and 80 GiB physical atom budgets were reduced by
+6.25%; LR schedule steps preserve approximate atom exposure. The reduced
+budget is not yet capacity-tested. Use mlff:f4ba2ec or later for the factorized
+bond readout.
 """
 
 from __future__ import annotations
@@ -20,19 +21,19 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 16_000
+TARGET_TRAIN_BATCH_ATOMS = 15_000
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
-# Inherited compiled-field + history physical atom capacities.
-# The 80 GiB budget OOMed with the 256-wide, two-layer bond baseline.
-# Width 128 and depth 4 are an architecture comparison, not a proven memory fix.
-# No tier has been capacity-tested with this sibling.
+# Compiled-field + history physical atom capacities.
+# This sibling OOMed at 8,192 physical / 16,000 logical atoms on an 80 GiB GPU.
+# Reduce both budgets by 6.25%, preserving their ratio; other physical caps stay.
+# The reduced budget is a planning choice, not a measured capacity guarantee.
 MICROBATCH_ATOMS_BY_TIER = {
     "under_12gb": 400,
     "12_to_23gb": 768,
     "24_to_39gb": 1536,
     "40_to_79gb": 3200,
-    "80gb_plus": 8192,
+    "80gb_plus": 7680,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
@@ -178,10 +179,10 @@ class ConfigProvider:
                 params=dict(
                     name="exp_warmup",
                     params=dict(
-                        # Preserve approximate atom exposure: old steps *
-                        # 12,000 / 16,000, rounded to the nearest step.
-                        warmup_steps=1_153,
-                        decay_steps=23_066,
+                        # Preserve approximate atom exposure: previous steps *
+                        # 16,000 / 15,000, rounded to the nearest step.
+                        warmup_steps=1_230,
+                        decay_steps=24_604,
                         min_lr_ratio=0.01,
                     ),
                     interval="step",
