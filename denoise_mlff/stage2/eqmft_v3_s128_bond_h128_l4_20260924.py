@@ -2,9 +2,9 @@
 
 Uses the original bond features without an extra endpoint projection. The shared
 energy-head settings apply to both atom and bond readouts. Keeps the Stage-1
-epoch-20 checkpoint, compiled fields, and history optimization. After this
-sibling OOMed, the logical and 80 GiB physical atom budgets were reduced by
-6.25%; LR schedule steps preserve approximate atom exposure. The reduced
+epoch-20 checkpoint, compiled fields, and history optimization. After another
+OOM at 7,680 physical / 15,000 logical atoms, both budgets were reduced by
+10%; LR schedule steps preserve approximate atom exposure. The reduced
 budget is not yet capacity-tested. Use mlff:f4ba2ec or later for the factorized
 bond readout.
 """
@@ -21,19 +21,19 @@ from ..stage1._elastic_batch import print_elastic_batch_plan, resolve_elastic_ba
 GRAPH_ROOT = os.path.expanduser("~/data/MPtrj/graph_mmap")
 MODEL_ROOT = os.path.expanduser("~/models")
 SPLIT_SCHEME = "train98_val1_test1_seed0"
-TARGET_TRAIN_BATCH_ATOMS = 15_000
+TARGET_TRAIN_BATCH_ATOMS = 13_500
 VALIDATION_SAMPLE_CAP = 128
 MAX_ATOMS = 100
 # Compiled-field + history physical atom capacities.
-# This sibling OOMed at 8,192 physical / 16,000 logical atoms on an 80 GiB GPU.
-# Reduce both budgets by 6.25%, preserving their ratio; other physical caps stay.
+# This sibling also OOMed at 7,680 physical / 15,000 logical atoms on an 80 GiB GPU.
+# Reduce both budgets by another 10%, preserving their ratio; other caps stay.
 # The reduced budget is a planning choice, not a measured capacity guarantee.
 MICROBATCH_ATOMS_BY_TIER = {
     "under_12gb": 400,
     "12_to_23gb": 768,
     "24_to_39gb": 1536,
     "40_to_79gb": 3200,
-    "80gb_plus": 7680,
+    "80gb_plus": 6912,
 }
 STAGE1_CHECKPOINT = os.path.join(
     MODEL_ROOT,
@@ -180,9 +180,9 @@ class ConfigProvider:
                     name="exp_warmup",
                     params=dict(
                         # Preserve approximate atom exposure: previous steps *
-                        # 16,000 / 15,000, rounded to the nearest step.
-                        warmup_steps=1_230,
-                        decay_steps=24_604,
+                        # 15,000 / 13,500, rounded to the nearest step.
+                        warmup_steps=1_367,
+                        decay_steps=27_338,
                         min_lr_ratio=0.01,
                     ),
                     interval="step",
