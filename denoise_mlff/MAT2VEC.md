@@ -43,3 +43,16 @@ Validation covers table hashes and atomic-number mappings, unchanged frozen
 vectors after optimizer steps, architecture separation, conservative Stage-2
 integration, and legacy checkpoint compatibility. The frozen provider is
 checked against the original width-128 config across GPU-memory tiers.
+
+## Muon optimizer experiment
+
+`stage1/eqmft_fourier_v3_sparse_site128_mat2vec_frozen_muon_20260926.py`
+keeps the frozen width128 architecture, data, batching, and schedule, and changes
+the optimizer to Muon for trunk channel matrices plus AdamW for other parameters.
+Packed token matrices receive independent Muon updates. The table remains frozen.
+The learning rate stays `1e-3` and weight decay `0.01`, with
+`adjust_lr_fn="match_rms_adamw"`, momentum `0.95`, and five Newton-Schulz steps.
+The shared builder also supports Stage-2 conservative training and its readouts;
+see `documents/MUON.md` in the MLFF runtime repository. No training is launched
+by preparing this provider, and its inherited GPU caps are not measured Muon
+capacity.
