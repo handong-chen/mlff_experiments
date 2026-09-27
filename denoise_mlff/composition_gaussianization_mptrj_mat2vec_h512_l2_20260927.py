@@ -1,0 +1,108 @@
+"""Composition preprocessing, bias-only pretrain, and frozen bounded Gaussianization.
+
+Run the four commands documented in MLFF GAUSSIAN_ENERGY_NORMALIZATION.md.
+Existing joint-scale configurations retain their own behavior.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+
+DATA_DIR = os.path.expanduser(
+    "~/data/MPtrj/composition_reference/composition_preprocess_mptrj_global_holdout_20260927"
+)
+MODEL_ROOT = os.path.expanduser("~/models")
+EPOCHS = 100
+
+
+def _short_code_version(version: str) -> str:
+    if version.startswith("local://"):
+        return "local"
+    if len(version) >= 12 and all(
+        char in "0123456789abcdefABCDEF" for char in version
+    ):
+        return version[:7]
+    return version
+
+
+def _resolve_code_version_str() -> str:
+    from remote_import.repo_config import (
+        get_code_version_from_env,
+        prepare_code_version_str,
+    )
+
+    return prepare_code_version_str(
+        {
+            repo: _short_code_version(version)
+            for repo, version in get_code_version_from_env().items()
+        }
+    )
+
+
+class ConfigProvider:
+    def __call__(self, *args, **kwargs):
+        del args, kwargs
+        fit_config_name = Path(__file__).stem
+        bias_output = os.path.join(MODEL_ROOT, "denoise_mlff", "composition_pretrain",
+                                   fit_config_name, _resolve_code_version_str())
+        residual_dir = os.path.expanduser("~/data/MPtrj/energy_gaussianization/" + fit_config_name)
+        return dict(
+            composition_preprocess=dict(
+                graph_root=os.path.expanduser("~/data/MPtrj/graph_mmap"),
+                source_split_scheme="train98_val1_test1_seed0", output_dir=DATA_DIR,
+                source_namespace="mptrj", trajectory_id_transform="drop_last_dash_component",
+                n_elements=119, max_atoms=100, scale_floor_eV_per_atom=0.05,
+                progress_every=100000, target_policy="global_holdout_priority",
+            ),
+            gaussianization_preprocess=dict(
+                composition_data_dir=DATA_DIR, composition_checkpoint=os.path.join(bias_output, "best.pt"),
+                graph_root=os.path.expanduser("~/data/MPtrj/graph_mmap"), output_dir=residual_dir,
+                progress_every=100000,
+            ),
+            gaussianization_fit=dict(
+                data_dir=residual_dir,
+                output_dir=os.path.join(MODEL_ROOT, "denoise_mlff", "gaussianization", fit_config_name, _resolve_code_version_str()),
+                linear_tail_fraction=0.1, fit_sample_count=100000, seed=1729, max_iterations=200,
+            ),
+            optimizer=dict(
+                name="remote_import.mlff.pipeline.build_optimizer",
+                params=dict(
+                    name="torch.optim.AdamW",
+                    params=dict(lr=1.0e-3, weight_decay=1.0e-4),
+                ),
+            ),
+            lr_scheduler=dict(
+                name="remote_import.mlff.pipeline.build_scheduler",
+                params=dict(
+                    name="torch.optim.lr_scheduler.CosineAnnealingLR",
+                    params=dict(T_max=EPOCHS, eta_min=1.0e-5),
+                    interval="epoch",
+                ),
+            ),
+            trainer=dict(
+                output_dir=bias_output,
+                epochs=EPOCHS,
+                seed=42,
+                eval_seed=1729,
+                grad_clip=1.0,
+                grad_accumulation_steps=1,
+                log_every_steps=20,
+                save_every_epochs=1,
+                keep_last_checkpoints=3,
+                amp=False,
+                float32_matmul_precision="highest",
+                compile_model=False,
+            ),
+            composition_pretrain=dict(
+                data_dir=DATA_DIR,
+                hidden_dim=512,
+                hidden_layers=2,
+                predict_scale=False,
+                batch_size=256,
+                bias_loss_scale_eV_per_atom=1.0,
+                scale_loss_weight=1.0,
+                max_train_batches=None,
+            ),
+        )
