@@ -37,13 +37,13 @@ STAGE1_CHECKPOINT = os.path.join(
     "mlff=fbf3c11;workshop=9afaf97",
     "epoch_000015.pt",
 )
-# Expected output of gaussianization_mptrj_mat2vec_h512_l2_20260927 under the
-# previously prepared processing pins. This identity never follows Stage-2 pins.
+# Selected Gaussianization run. The experiments repository is unpinned and
+# is not part of the run directory. This identity never follows Stage-2 pins.
 ENERGY_GAUSSIANIZATION_CHECKPOINT = os.path.join(
     MODEL_ROOT,
     "denoise_mlff", "gaussianization",
     "gaussianization_mptrj_mat2vec_h512_l2_20260927",
-    "mlff=9d73137;workshop=9afaf97;mlff_experiments=e34236e",
+    "mlff=9d73137;workshop=9afaf97",
     "composition_gaussianization_mptrj_mat2vec_h512_l2_20260927",
     "mlff=6583d1d;workshop=9afaf97",
     "epoch_000100", "normalizer.pt",
