@@ -20,7 +20,7 @@ MODEL_ROOT = os.path.expanduser("~/models")
 COMPOSITION_RUN_DIR = os.path.expanduser(
     "~/models/denoise_mlff/composition_pretrain/"
     "composition_gaussianization_mptrj_mat2vec_h512_l2_20260927/"
-    "mlff=fbf3c11;workshop=9afaf97"
+    "mlff=6583d1d;workshop=9afaf97"
 )
 # None selects best.pt; an integer selects epoch_<six digits>.pt.
 COMPOSITION_CHECKPOINT_EPOCH: int | None = 100
