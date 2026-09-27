@@ -15,12 +15,12 @@ DATA_DIR = os.path.expanduser(
     "~/data/MPtrj/composition_reference/composition_preprocess_mptrj_global_holdout_20260927"
 )
 MODEL_ROOT = os.path.expanduser("~/models")
-# The previously supplied pinned training command writes to this run directory.
-# Replace it with the completed run you choose to use after reviewing its results.
+# Completed source run selected after reviewing training results.
+# This directory is independent of the code pins used for Gaussianization.
 COMPOSITION_RUN_DIR = os.path.expanduser(
     "~/models/denoise_mlff/composition_pretrain/"
     "composition_gaussianization_mptrj_mat2vec_h512_l2_20260927/"
-    "mlff=6583d1d;workshop=9afaf97;mlff_experiments=1106a41"
+    "mlff=fbf3c11;workshop=9afaf97"
 )
 # None selects best.pt; an integer selects epoch_<six digits>.pt.
 COMPOSITION_CHECKPOINT_EPOCH: int | None = 100
