@@ -1,7 +1,7 @@
-"""Composition preprocessing, bias-only pretrain, and frozen bounded Gaussianization.
+"""Composition preprocessing and bias-only pretraining for Gaussianized energy.
 
-Run the four commands documented in MLFF GAUSSIAN_ENERGY_NORMALIZATION.md.
-Existing joint-scale configurations retain their own behavior.
+After reviewing training, select its checkpoint in the separate
+gaussianization_mptrj_mat2vec_h512_l2_20260927 post-training provider.
 """
 
 from __future__ import annotations
@@ -47,7 +47,6 @@ class ConfigProvider:
         fit_config_name = Path(__file__).stem
         bias_output = os.path.join(MODEL_ROOT, "denoise_mlff", "composition_pretrain",
                                    fit_config_name, _resolve_code_version_str())
-        residual_dir = os.path.expanduser("~/data/MPtrj/energy_gaussianization/" + fit_config_name)
         return dict(
             composition_preprocess=dict(
                 graph_root=os.path.expanduser("~/data/MPtrj/graph_mmap"),
@@ -55,16 +54,6 @@ class ConfigProvider:
                 source_namespace="mptrj", trajectory_id_transform="drop_last_dash_component",
                 n_elements=119, max_atoms=100, scale_floor_eV_per_atom=0.05,
                 progress_every=100000, target_policy="global_holdout_priority",
-            ),
-            gaussianization_preprocess=dict(
-                composition_data_dir=DATA_DIR, composition_checkpoint=os.path.join(bias_output, "best.pt"),
-                graph_root=os.path.expanduser("~/data/MPtrj/graph_mmap"), output_dir=residual_dir,
-                progress_every=100000,
-            ),
-            gaussianization_fit=dict(
-                data_dir=residual_dir,
-                output_dir=os.path.join(MODEL_ROOT, "denoise_mlff", "gaussianization", fit_config_name, _resolve_code_version_str()),
-                linear_tail_fraction=0.1, fit_sample_count=100000, seed=1729, max_iterations=200,
             ),
             optimizer=dict(
                 name="remote_import.mlff.pipeline.build_optimizer",
